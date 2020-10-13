@@ -13,7 +13,8 @@ R version 3.6.0 (2019-04-26)
 	7. Test data
 
 ## 1. R Packages
-To run CGAS, users will have to pre-install the following packages
+To run CGAS, users will have to pre-install the following packages:
+
 	1. plyr and dplyr (Wickham 2011 & Wickham et al. 2018)
 	2. tidyr (Wickham 2019)
 	3. data.table (Dowle & Srinivasan 2018)
@@ -27,6 +28,7 @@ To run CGAS, users will have to pre-install the following packages
 
 ## 2. Accompanying files
 In its most “barebones” state, FiReMAGE needs the following files to operate:
+
 	1. FiReMAGE.R - pipeline
 	2. functions.R - Rscript containing all the functions used in the pipeline
 	3. org_chromosome_coords.csv - contains all of the base pair lengths for each chromosome of each species in the comparison
@@ -54,6 +56,7 @@ A list of the genes found in the actual dataset are listed and ranked in a file 
 Data from the actual and permutation datasets are displayed as graphs in the OUTDIRPATH/graphs directory.  Horizontal barplots display the number of orthologous genes per trait (95 and 99th percentiles) - one frame per species and the number of loci returning orthologous genes per trait (95 and 99th percentiles) - one frame per species. Vertical barplots display the number of loci associated with multiple orthologous genes - one graph per trait, per species. Preferences for graph output and design can be altered  in FiReMAGE.R. 
 
 ## 4. Options
+
 	1. -h, --help : Shows a docopt help screen displaying all options
 	2. -s <path>, --snps <path> : The path to the directory containing the SNP files for the comparison, required for the operation of CGAS. The pathway for the test/tutorial dataset is “./data/el_snps/current/”
 	3. -m <path>, --metaTable <path>: Path to read in the metadata table of organisms in the comparison, required for the operation of CGAS. A template and sample metatable input for the test/tutorial dataset is “./data/metaTables/CGASmetaTableInput.csv”
@@ -77,7 +80,8 @@ Rscript FiReMAGE.R -s "./data/el_snps/current/" -m "./data/metaTables/CGASmetaTa
 
 The resulting files should be output by default into ./FM_output/. This can be compared to the directory ‘./test_output/’ which has the example files that should be produced from this test. The FinalMerge.csv should be the same, and RandomMerge.csv may be slightly different due to it’s random nature. If an exact comparison is desired, the set.seed lines can be uncommented in the Random_searchNEW.R section on lines 163 and 165 to get the exact results in the ‘./test_output/’ directory. Nevertheless, all of the actual dataset results should be the same. An example of the verbose output from the code can be seen in ‘./test_output/test_log.txt’. This file is what a normal output (including all the warnings) looks like for a run of FiReMAGE. 
 
-References:
+##References:
+
 Cooper, N. 2017. reader: Suite of Functions to Flexibly Read Data from Files. R package version 1.0.6. https://CRAN.R-project.org/package=reader
 
 De Jonge, E. 2016. docopt: Command-Line Interface Specification Language. R package version 0.4.5.  https://CRAN.R-project.org/package=docopt
