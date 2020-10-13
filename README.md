@@ -2,7 +2,7 @@
 
 FiReMAGE is a tool written in R that analyzes GWAS datasets of the same traits in multiple species to search for orthologous genes associated with SNPs from their respective species' dataset. 
 
-R version 3.5.0 (2018-04-23)
+R version 3.6.0 (2019-04-26)
 
 	1. R Packages
 	2. Accompanying files
