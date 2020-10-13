@@ -80,7 +80,7 @@ Rscript FiReMAGE.R -s "./data/el_snps/current/" -m "./data/metaTables/CGASmetaTa
 
 The resulting files should be output by default into ./FM_output/. This can be compared to the directory ‘./test_output/’ which has the example files that should be produced from this test. The FinalMerge.csv should be the same, and RandomMerge.csv may be slightly different due to it’s random nature. If an exact comparison is desired, the set.seed lines can be uncommented in the Random_searchNEW.R section on lines 163 and 165 to get the exact results in the ‘./test_output/’ directory. Nevertheless, all of the actual dataset results should be the same. An example of the verbose output from the code can be seen in ‘./test_output/test_log.txt’. This file is what a normal output (including all the warnings) looks like for a run of FiReMAGE. 
 
-## References:
+## References
 
 Cooper, N. 2017. reader: Suite of Functions to Flexibly Read Data from Files. R package version 1.0.6. https://CRAN.R-project.org/package=reader
 
