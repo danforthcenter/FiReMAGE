@@ -13,7 +13,7 @@ R version 3.6.0 (2019-04-26)
 	7. Test data
 
 ## 1. R Packages
-To run CGAS, users will have to pre-install the following packages:
+To run FiReMAGE, users will have to pre-install the following packages:
 
 	1. plyr and dplyr (Wickham 2011 & Wickham et al. 2018)
 	2. tidyr (Wickham 2019)
@@ -39,7 +39,7 @@ In its most “barebones” state, FiReMAGE needs the following files to operate
 ## 3. Function
 FiReMAGE v.0.5 comes with the RScript files FiReMAGE.R and functions.R, and the data directory containing organism chromosome coordinates, Phytozome InParanoid files for Arabidopsis thaliana, Glycine max, Sorghum bicolor and Zea mays. The versions of these included organisms are listed in currentVersions.txt, included in the data directory. If the SNP data is different from the most up-to-date versions, or other deviations like custom coordinates are to be used, they should be altered in the organism coordinates file. When using real data SNP files, make sure the format matches the test SNP files in the data/el_snps/ directory, and that the name includes the species name as spelled in the metaTable. This allows for multiple SNP files to be kept in one directory, and only the ones included in the metaTable will be read into the pipeline. Additional Phytozome files for species not included in FiReMAGE v.0.5 should be downloaded from Phytozome with header orders matching the test files in the data/phytozome/ directory, and should be added to the data/phytozome/ directory. You will need a phytozome file for each unique comparison of every species in your analysis. For example, if you have an A.thaliana_to_G.max phytozome file, you do not need a G.max_to_A.thaliana phytozome file.
 
-The beginning lines of the pipeline changes slightly depending on if it is run in terminal or in GUI RStudio. When running the pipeline on R in a terminal setting, it is recommended to use the docopt formatting of options (lines 1-40) rather than the regular way of declaring variables in RStudio (lines 42-51). By default, CGASconcise.R comes with the terminal docopt code commented out. To run in terminal, one should uncomment lines 1-40 and comment lines 42-50 to prevent the RStudio code from overwriting the terminal options. 
+The beginning lines of the pipeline changes slightly depending on if it is run in terminal or in GUI RStudio. When running the pipeline on R in a terminal setting, it is recommended to use the docopt formatting of options (lines 1-40) rather than the regular way of declaring variables in RStudio (lines 42-51). By default, FiReMAGE.R comes with the terminal docopt code commented out. To run in terminal, one should uncomment lines 1-40 and comment lines 42-50 to prevent the RStudio code from overwriting the terminal options. 
 
 The FiReMAGE pipeline starts out by creating the metaTable, which will indicate the species in the comparison, the linkage disequilibrium (LD) ranges for each species, and the number of chromosomes for each species. It's very important that the metaTable be in the same format as the template because the following functions all refer to the metaTable for information on how many times to iterate, which species is next, etc. 
 
@@ -58,9 +58,9 @@ Data from the actual and permutation datasets are displayed as graphs in the OUT
 ## 4. Options
 
 	1. -h, --help : Shows a docopt help screen displaying all options
-	2. -s <path>, --snps <path> : The path to the directory containing the SNP files for the comparison, required for the operation of CGAS. The pathway for the test/tutorial dataset is “./data/el_snps/current/”
-	3. -m <path>, --metaTable <path>: Path to read in the metadata table of organisms in the comparison, required for the operation of CGAS. A template and sample metatable input for the test/tutorial dataset is “./data/metaTables/CGASmetaTableInput.csv”
-	4. -o <path>, --output <path>: Files will be written to this path, the default is “./CGAS_output/”
+	2. -s <path>, --snps <path> : The path to the directory containing the SNP files for the comparison, required for the operation of FiReMAGE. The pathway for the test/tutorial dataset is “./data/el_snps/current/”
+	3. -m <path>, --metaTable <path>: Path to read in the metadata table of organisms in the comparison, required for the operation of FiReMAGE. A template and sample metatable input for the test/tutorial dataset is “./data/metaTables/CGASmetaTableInput.csv”
+	4. -o <path>, --output <path>: Files will be written to this path, the default is “./FiReMAGE_output/”
 	5. -p <int>, --permutations <int>: Number of permutations for random dataset, default and recommendation is 1000
 	6. -c <int>, --cores <int>: Number of cores to use for parallel loops, the default is 1 so it will naturally run on any system
 	7. -f <path> : The path to the directory containing the Phytozome ortholog files. The pathway for the test/tutorial dataset is "./data/phytozome/"
