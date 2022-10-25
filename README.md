@@ -24,7 +24,7 @@ FiReMAGE will use and install the following packages:
 	7. iterators (Revolution Analytics & Weston 2017) 
 	8. scales (Wickham 2017)
 	9. ggplot2 (Wickham 2016)
-	10. rbenchmark (citation)
+	10. rbenchmark (Kusnierczyk 2012)
 	11. docopt - optional for RStudio use, necessary for use in terminal R (Jonge 2016)
 
 ## 2. Directories and Accompanying files
