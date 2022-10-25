@@ -1,8 +1,8 @@
 # FiReMAGE: Filtering Results of Multispecies Analogous GWAS Experiments
 
-FiReMAGE is a tool written in R that analyzes GWAS datasets of the same traits in multiple species to search for orthologous genes associated with SNPs from their respective species' dataset. 
+FiReMAGE is a tool written in R that analyzes GWAS datasets of the same traits in multiple species to search for linked orthologous genes. 
 
-R version 3.6.0 (2019-04-26)
+R version 4.1.0 (2021-05-18)
 
 	1. R Packages
 	2. Directories & Accompanying files
@@ -60,14 +60,14 @@ Data from the actual and permutation datasets are displayed as graphs in the OUT
 	1. -h, --help : Shows a docopt help screen displaying all options
 	2. -s <path>, --snps <path> : The path to the directory containing the SNP files for the comparison, required for the operation of FiReMAGE. The pathway for the test/tutorial dataset is “./data/el_snps/current/”
 	3. -m <path>, --metaTable <path>: Path to read in the metadata table of organisms in the comparison, required for the operation of FiReMAGE. A template and sample metatable input is in ./data/metaTables/
-	4. -o <path>, --output <path>: Files will be written to this path, the default is “./FM_output/”
-	5. -p <int>, --permutations <int>: Number of permutations for random dataset, default and recommendation is 1000 for full analysis, 100 for initial testing
-	6. -c <int>, --cores <int>: Number of cores to use for parallel loops, the default is 1 so it will naturally run on any system
-	7. -f <path> --orthologFiles: The path to the directory containing ortholog files.
+	4. -f <path> --orthologFiles: The path to the directory containing ortholog files.
+	5. -o <path>, --output <path>: Files will be written to this path, the default is “./FM_output/”
+	6. -p <int>, --permutations <int>: Number of permutations for random dataset, default and recommendation is 1000 for full analysis, 100 for initial testing
+	7. -c <int>, --cores <int>: Number of cores to use for parallel loops, the default is 1 so it will naturally run on any system 
 
 ## 5. SNP input file format
 
-To work with the FiReMAGE pipeline, SNP files should have columns for the organism, trait, base pair position on chromosome, and chromosome number of the SNPs. They do not necessarily have to be in order, as the pipeline with order the file with the function snpFilePrep. Chromosome and base pair columns should be numerical (ie. 7, instead of Chr 7, Chr_7). The pipeline expects a different SNP file for each organism in the comparison; no need to concatenate all the files before had.
+To work with the FiReMAGE pipeline, SNP files should have columns for the organism, trait, base pair position on chromosome, and chromosome number of the SNPs. They do not necessarily have to be in order, as the pipeline will order the file with the function snpFilePrep. Chromosome and base pair columns should be numerical (ie. 7, instead of Chr 7, Chr_7). The pipeline expects a different SNP file for each organism in the comparison; no need to concatenate all the files before had.
 
 ## 6. Customizing ortholog files
 OrthoFinder: Users should downloaded the appropriate fasta protien files and run according to OrthoFinder v2.0 instructions (https://github.com/davidemms/OrthoFinder, Emms & Kelly, 2019).
@@ -109,5 +109,3 @@ Wickham, H., François, R., Henry, L. and Müller, K. 2018. dplyr: A Grammar of 
 Wickham, H., & Hester, J. 2020. readr: Read Rectangular Text Data. R package version 1.4.0. https://CRAN.R-project.org/package=readr
 
 Wickham, H. & Henry, L. 2019. tidyr: Easily Tidy Data with 'spread()' and 'gather()' Functions. R package version 0.8.3 https://CRAN.R-project.org/package=tidyr
-
-Ziegler, G. 2017. ionomicsUtils: Utility functions for ionomics data analysis. R package version 1.0.
