@@ -108,8 +108,6 @@ Wickham, H., François, R., Henry, L. and Müller, K. 2018. dplyr: A Grammar of 
 
 Wickham, H., & Hester, J. 2020. readr: Read Rectangular Text Data. R package version 1.4.0. https://CRAN.R-project.org/package=readr
 
-Wickham, H., Hester, J. & Francois, R. 2017. readr: Read Rectangular Text Data. R package version 1.1.1. https://CRAN.R-project.org/package=readr
-
 Wickham, H. & Henry, L. 2019. tidyr: Easily Tidy Data with 'spread()' and 'gather()' Functions. R package version 0.8.3 https://CRAN.R-project.org/package=tidyr
 
 Ziegler, G. 2017. ionomicsUtils: Utility functions for ionomics data analysis. R package version 1.0.
