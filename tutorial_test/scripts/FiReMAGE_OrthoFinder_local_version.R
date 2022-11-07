@@ -842,7 +842,7 @@ priorityList$rank_new <-
 
 priorityList_split <- split(priorityList, priorityList$trait)
 for (t in priorityList_split) {
-  individualPriority <- arrange(t, desc(rank_new))
+  individualPriority <- arrange(t, pFDR)
   
   write.csv(
     individualPriority,
