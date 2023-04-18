@@ -75,11 +75,7 @@ InParanoid:New ortholog comparison files downloaded from Phytozome should have n
 
 ## 7. Test data
 
-FiReMAGE comes with a shortened version of our four-way comparison between A. thaliana, G. max, S. bicolor, and Z. mays SNP files as a way to test the set up of FiReMAGE on your local computer. The SNP files are labeled for their species with the suffix _test_data.csv. Unpack, and install the necessary libraries, and it's ready to run (RStudio and command line available). An example of the command line version: 
-
-Rscript FiReMAGE.R -s "./data/seedIonome_snps/" -m "./data/metaTables/CGASmetaTableInput.csv"  -f  "./data/OrthoFinder_orthologs/" -p 1000 -c 8 
-
-The resulting files should be output by default into ./FM_output/. This can be compared to the directory ‘./test_output/’ which has the example files that should be produced from this test. The Orthogroup_hits.csv should be the same, and the permutation files may be slightly different due to the random distributions. If an exact comparison is desired, users can look at the set.seed() function in R. Nevertheless, all of the actual dataset results should be the same. An example of the verbose output from the code can be seen in ‘./test_output/test_log.txt’. This file is what a normal output (including all the warnings) looks like for a run of FiReMAGE. 
+A shortened version of our ionomic data can be found in the example_test/ dir to quickly test your FiReMAGE set up before running a full job. An example script for running FiReMAGE in RStudio with the test data is also provided.
 
 ## References
 
