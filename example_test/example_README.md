@@ -1,4 +1,4 @@
-#Example test README
+# Example test README
 
 The example folder contains a small subset of the ionomic datasets to quickly check if FiReMAGE files were downloaded properly. Example_test/example_output/ is provided to compare with the test output. A script for checking on a local device in RStudio is in example_test/scripts/, for testing on a remote server run the FiReMAGE_OrthoFinder_server_version.R with these arguments:
 
