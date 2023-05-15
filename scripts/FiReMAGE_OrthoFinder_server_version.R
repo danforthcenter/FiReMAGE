@@ -224,6 +224,8 @@ write.csv(
   row.names = F
 )
 
+og_strs<-apply(orthogroups,1,paste0,collapse=",")
+
 OrthoMerge <-
   foreach(
           i = as.character(unique(snp_gene_hitTable$`Gene Name`)),
