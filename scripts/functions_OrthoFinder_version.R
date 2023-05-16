@@ -65,16 +65,3 @@ collapsing <- function(snpTable, begin_loci = 1, done = F) {
   }
   return(snpTable)
 }
-
-get_orthogroups<-function(x, OF_table=orthogroups, ind_matrix=og_strs){
-  og<-OF_table[str_which(ind_matrix, x),]
-  if(nrow(og)==0){
-    og<-cbind(og[1L,], GeneID=x)
-    og[is.na(og)]<-""
-    return(og)
-  }else{
-    og<-as.data.frame(apply(og, c(1,2), OrthoFinder_protiens_2_genes))
-    og$GeneID<-x
-    return(og)
-  }
-}
