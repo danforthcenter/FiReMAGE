@@ -19,7 +19,8 @@ packages <-
     "iterators",
     "ggplot2",
     "scales",
-    "rbenchmark"
+    "rbenchmark",
+    "stringr"
   )
 for (x in packages) {
   if (!require(x, character.only = TRUE, quietly = TRUE)) {
@@ -40,6 +41,7 @@ library(iterators)
 library(ggplot2)
 library(scales)
 library(rbenchmark)
+library(stringr)
 
 #set working dir
 setwd("YOURPATH/FiReMAGE_v1/OrthoFinder_v/")
@@ -66,6 +68,9 @@ orthologs <-
     sep = "\t",
     stringsAsFactors = F
   )
+# collapsing orthogroups into strings speed up searches
+
+og_strs<-apply(orthologs,1,paste0,collapse=",")
 
 # permutations, 10 is usually good for testing
 
@@ -120,6 +125,8 @@ all_gene_coords <-
     coords$org <- o
     return(coords)
   }
+
+rm(orthologs)
 
 ################################################################################
 ### 1.1 Actual data: collapsing snps into loci
@@ -280,7 +287,8 @@ snps_sub$genecount <- unlist(genecount)
 write.csv(snps_sub, file=paste0(output, "snps_subset.csv"), row.names=F)
 write.table(OrthoMerge, file = paste0(output,"Orthogroup_hits.csv"), col.names = T, row.names = F, sep = ",")
 
-rm(snps)
+rm(snps,snp_gene_hitTable)
+gc()
 
 ################################################################################
 ### 2.1 Creating random permutations
@@ -499,7 +507,7 @@ backend <-
       ),
       row.names = F
     )
-    
+    gc()
   }
 
 rm(RandomLociRanges)
@@ -684,14 +692,14 @@ graphingDF <-
     summarize,
     GenesMean = mean(GeneCount),
     LociMean = mean(LociCount),
-    Gene95 = quantile(GeneCount, .95),
-    Loci95 = quantile(LociCount, .95),
-    Gene99 = quantile(GeneCount, .99),
-    Loci99 = quantile(LociCount, .99),
-    Gene05 = quantile(GeneCount, .05),
-    Loci05 = quantile(LociCount, .05),
-    Gene01 = quantile(GeneCount, .01),
-    Loci01 = quantile(LociCount, .01)
+    Gene95 = quantile(GeneCount, type=3, .95),
+    Loci95 = quantile(LociCount, type=3, .95),
+    Gene99 = quantile(GeneCount, type=3, .99),
+    Loci99 = quantile(LociCount, type=3, .99),
+    Gene05 = quantile(GeneCount, type=3, .05),
+    Loci05 = quantile(LociCount, type=3, .05),
+    Gene01 = quantile(GeneCount, type=3, .01),
+    Loci01 = quantile(LociCount, type=3, .01)
   )
 
 graphingDF$Gene95[graphingDF$dataset == "Actual"] <- NA
