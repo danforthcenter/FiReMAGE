@@ -1,6 +1,8 @@
-#Orthofinder local
+#FiReMAGE (Orthofinder version) for running in command line
 
+################################################################################
 ### 0. Setting up
+################################################################################
 
 rm(list=ls())
 
@@ -69,7 +71,6 @@ output<-opts[["--output"]]
 numPermutations <- as.integer(opts[["--permutations"]])
 nCore <- as.integer(opts[["--cores"]])
 
-####################################################################################################
 ## setting up cores for parallel processes
 
 registerDoParallel(cores = nCore)
@@ -85,7 +86,7 @@ dir.create(paste0(output, "graphs/"))
 dir.create(paste0(output, "permutation_files/"))
 dir.create(paste0(output, "permutation_files/snps/"))
 dir.create(paste0(output, "permutation_files/gene_hits/"))
-dir.create(paste0(output, "priority_lists/")) 
+dir.create(paste0(output, "candidate_lists/")) 
 
 ## making sure metaTable is in alphabetical order for sanity's sake
 
@@ -114,7 +115,9 @@ all_gene_coords <-
     return(coords)
   }
 
+################################################################################
 ### 1. Collapsing snp datasets (input_as_loci==FALSE) into loci and looking for linked genes
+################################################################################
 
 ## even if there are other species in the snp dir, should only read those listed in the metaTable
 
@@ -204,7 +207,9 @@ write.csv(
   row.names = F
 )
 
-## finding all linked genes
+################################################################################
+### 1.2 Filtering linked genes for orthologs
+################################################################################
 
 setDT(snps_sub)
 setkey(snps_sub, org, chr, start, end)
@@ -273,7 +278,9 @@ write.table(OrthoMerge, file = paste0(output,"Orthogroup_hits.csv"), col.names =
 
 rm(snps, snp_gene_hitTable)
 
-### 3. Creating random permutations
+################################################################################
+### 2.1 Creating random permutations
+################################################################################
 
 ## reading in chr coordinates for orgs in metaTable
 ## check to make sure the file has been updated to accomodate new orgs
@@ -445,7 +452,9 @@ if(numPermutations > 100) {
 }
 rm(AllPermuts)
 
-## finding linked genes
+################################################################################
+### 2.2 Filtering linked genes for orthologs in permutation data
+################################################################################
 
 backend <-
   foreach(
@@ -571,7 +580,9 @@ for(e in list.files(
 rm(Trait_split)
 print(paste("End permutations", Sys.time()))
 
-### 4. Using permutation distributions to assess the real data
+################################################################################
+### 3. Using permutation distributions to assess the actual loci
+################################################################################
 
 print("Summarizing actual data")
  
@@ -775,9 +786,9 @@ backend <-
     )
    }
 
-## making the priorityLists for each organism
+## making the candidateLists for each organism
 
-priorityList <-
+candidateList <-
   foreach(
     o = as.character(metaTable$orgs),
     .packages = packages.loaded(),
@@ -828,26 +839,26 @@ priorityList <-
   }
 
 ## ranking genes
-priorityList$rank <-
-  ((1 - priorityList$gFDR) * (1 - priorityList$pFDR) * (priorityList$present / nrow(metaTable)))
+candidateList$rank <-
+  ((1 - candidateList$gFDR) * (1 - candidateList$pFDR) * (candidateList$present / nrow(metaTable)))
 
 ## we thought gFDR was too harsh on some of our known ionomics genes so we took it down a bit
 ## the ranges used are pretty wide for ea species so it's likely to hit multiple genes, pFDR seemed more important
 ## might do something similar to the total # of species represented in an ortho group
 ## willing to hear any thoughts on this
 
-priorityList$rank_new <-
-  ((1 - (priorityList$gFDR * 0.2)) * (1 - (priorityList$pFDR)) * (priorityList$present / nrow(metaTable)))
+candidateList$rank_new <-
+  ((1 - (candidateList$gFDR * 0.2)) * (1 - (candidateList$pFDR)) * (candidateList$present / nrow(metaTable)))
 
-## Dividing the priority list up by trait
+## Dividing the candidate list up by trait
 
-priorityList_split <- split(priorityList, priorityList$trait)
-for (t in priorityList_split) {
-  individualPriority <- arrange(t, desc(rank_new))
+candidateList_split <- split(candidateList, candidateList$trait)
+for (t in candidateList_split) {
+  individualcandidate <- arrange(t, desc(rank_new))
   
   write.csv(
-    individualPriority,
-    file = paste0(output, "priority_lists/", t$trait[1], "_priorityList.csv"),
+    individualcandidate,
+    file = paste0(output, "candidate_lists/", t$trait[1], "_candidateList.csv"),
     row.names = FALSE
   )
 }
