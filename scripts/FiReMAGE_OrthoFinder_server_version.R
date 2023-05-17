@@ -21,8 +21,8 @@ Options:
 -c <int>    Number of cores [default: 1]
 " -> doc
 
-# sometimes the requirement 'rlang' for tidyr needs to be reinstalled on it's own, update.packages
-# and this loop won't work for it for some reason
+## sometimes the requirement 'rlang' for tidyr needs to be reinstalled on it's own, update.packages
+## and this loop won't work for it for some reason on my server
 
 packages <-
   c(
@@ -37,7 +37,8 @@ packages <-
     "iterators",
     "ggplot2",
     "scales",
-    "rbenchmark"
+    "doRNG",
+    "stringr"
   )
 for (x in packages) {
   if (!require(x, character.only = TRUE, quietly = TRUE)) {
@@ -56,22 +57,25 @@ library(readr)
 library(iterators)
 library(ggplot2)
 library(scales)
-library(rbenchmark)
+library(doRNG)
+library(stringr)
 
 source("./scripts/functions_OrthoFinder_version.R")
 
 ## docopt options,orthoFilePath from InParanoid was changed to orthologs here
+
 print("Reading in command line options...")
 
 opts <- docopt(doc)
 str(opts)
-snpPath<-opts[["-s"]]
-orthologs<-fread(opts[["-f"]], sep="\t", stringsAsFactors = FALSE)
-metaTable<-fread(opts[["-m"]], sep=",", stringsAsFactors = FALSE)
-output<-opts[["-o"]]
+snpPath <- opts[["-s"]]
+orthologs <- fread(opts[["-f"]], sep = "\t", stringsAsFactors = FALSE)
+metaTable <- fread(opts[["-m"]], sep = ",", stringsAsFactors = FALSE)
+output <- opts[["-o"]]
 numPermutations <- as.integer(opts[["-p"]])
 nCore <- as.integer(opts[["-c"]])
 perm_files <- opts[["-r"]]
+
 ## setting up cores for parallel processes
 
 registerDoParallel(cores = nCore)
@@ -91,7 +95,7 @@ dir.create(paste0(output, "candidate_lists/"))
 
 ## collapsing orthogroups into strings speed up searches
 
-og_strs<-apply(orthologs,1,paste0,collapse=",")
+og_strs<-apply(orthologs, 1, paste0, collapse = ",")
 
 ## making sure metaTable is in alphabetical order for sanity's sake
 
@@ -99,7 +103,7 @@ metaTable <- metaTable[order(metaTable$orgs), ]
 
 ## gene coordinates for all species, used to find linked genes in the snps
 
-# NA's from all_gene_coords is trying to change mitchondria (M) and chloroplast (C) chr to integers
+## NA's from all_gene_coords is trying to change mitchondria (M) and chloroplast (C) chr to integers
 
 all_gene_coords <-
   foreach(
@@ -159,7 +163,7 @@ CollapsedSNPs <-
             }
           }
 
-# appending datasets input as loci
+## appending datasets input as loci
 
 for(m in metaTable$orgs[metaTable$input_as_loci]){
   file <-
@@ -169,29 +173,29 @@ for(m in metaTable$orgs[metaTable$input_as_loci]){
       full.names = TRUE
     )
   SNPfile <- read.csv(file)
-  SNPfile<-SNPfile[,c("trait","org","chr","bp","start","end")]
+  SNPfile <- SNPfile[,c("trait", "org", "chr", "bp", "start", "end")]
   ###ordering--must have chromosomes and SNPs in numerical order
-  SNPfile$chr<-as.integer(SNPfile$chr)
-  SNPfile<-SNPfile[order(SNPfile[,"trait"], SNPfile[,"org"], SNPfile[,"chr"], SNPfile[, "end"]),]
-  SNPfile$SNPend<-NA
-  SNPfile$clpsRanges<-SNPfile$end - SNPfile$start
+  SNPfile$chr <- as.integer(SNPfile$chr)
+  SNPfile <- SNPfile[order(SNPfile[,"trait"], SNPfile[,"org"], SNPfile[,"chr"], SNPfile[, "end"]),]
+  SNPfile$SNPend <- NA
+  SNPfile$clpsRanges <- SNPfile$end - SNPfile$start
   SNPfile$range <- metaTable$range[metaTable$orgs == m]
-  CollapsedSNPs<-rbind(CollapsedSNPs,SNPfile)
+  CollapsedSNPs <- rbind(CollapsedSNPs, SNPfile)
 }
 
-# SNPs within 2*range of the beginning of loci are left with clpsRanges at NA, so we remove them to leave only loci
+## SNPs within 2*range of the beginning of loci are left with clpsRanges at NA, so we remove them to leave only loci
 
 snps_sub <- CollapsedSNPs[!is.na(CollapsedSNPs$clpsRanges), ]
 
-# The first loci will get it's start set at bp - range, which will be negative, so set those back to 1
+## The first loci will get it's start set at bp - range, which will be negative, so set those back to 1
 
 snps_sub$start[snps_sub$start < 1] <- 1
 
-# get rid of SNPend and clpsranges columns and reordering columns, info still in CollapsedSNPs for sanity checks if needed
+## get rid of SNPend and clpsranges columns and reordering columns, info still in CollapsedSNPs for sanity checks if needed
 
 snps_sub <- data.frame(snps_sub[, c("org", "chr", "bp", "trait")], apply(snps_sub[, c("start", "end")], 2, ceiling))
 
-# making unique loci names
+## making unique loci names
 
 snps_sub$loci <- paste0(snps_sub$org,
                         "_",
@@ -201,7 +205,7 @@ snps_sub$loci <- paste0(snps_sub$org,
                         "_",
                         snps_sub$bp)
 
-# counting collapsed snps for each org/trait combo
+## counting collapsed snps for each org/trait combo
 
 leafcollapsedSNPs <- data.frame(unclass(table(snps_sub$trait, snps_sub$org)))
 leafcollapsedSNPs <- leafcollapsedSNPs[, order(colnames(leafcollapsedSNPs))]
@@ -230,50 +234,52 @@ snp_gene_hitTable <-
     type = "any",
     nomatch = NULL
   )
+
 write.csv(
   snp_gene_hitTable,
   file = paste0(output, "snp_gene_hitTable.csv"),
   row.names = F
 )
 
-OG_IDs<-mclapply(as.character(unique(snp_gene_hitTable$`Gene Name`)),
-                 FUN = get_orthogroups, mc.cores = nCore)
+# # MCLAPPLY NOTE: will NOT run in parallel on Windows due to forking issues # #
+
+OG_IDs <- mclapply(as.character(unique(snp_gene_hitTable$`Gene Name`)),
+                          FUN = get_orthogroups, mc.cores = nCore)
+
+## foreach is recommended for Windows to run in parallel
+## can switch to below if running on Windows
+
+# OG_IDs <-
+#   foreach(
+#     i = as.character(unique(snp_gene_hitTable$`Gene Name`)),
+#     .packages = packages.loaded()
+#   ) %dopar% {
+#     og <- get_orthogroups(i)
+#     return(og)
+#   }
+
+# # Continue # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 OrthoMerge<-merge(snp_gene_hitTable, bind_rows(OG_IDs), by.x = "Gene Name",
                   by.y = "ID")
-
-# OrthoMerge <-
-#   foreach(
-#           i = as.character(unique(snp_gene_hitTable$`Gene Name`)),
-#           .packages = packages.loaded(),
-#           .combine = rbind
-#         ) %dopar% {
-#           og<-orthologs$Orthogroup[as.integer(unlist(Map(grep, paste(i), orthologs)))]
-#           if (!identical(og, character(0))) {
-#             return(cbind(snp_gene_hitTable[snp_gene_hitTable$`Gene Name` == i,],
-#                          data.frame(Orthogroup = og)))
-#           }
-#         }
 
 ## quick sanity check to make sure orthogroups merged with their genes correctly, I'll leave it here for troubleshooting
 
 # backend<- foreach(i=1:nrow(OrthoMerge), .combine = c) %dopar% {
 #   OrthoMerge$Orthogroup[i]==orthologs$Orthogroup[as.integer(unlist(Map(grep, paste(OrthoMerge$`Gene Name`[i]), orthologs)))]
 # }
- 
-##
 
-# present is what I named the col for counting the number of species present in a ortho group
-# present is used later to rank genes
+## present is what I named the col for counting the number of species present in a ortho group
+## present is used later to rank genes
 
-speciesCount<-as.data.frame(table(OrthoMerge$Orthogroup, OrthoMerge$org, OrthoMerge$trait))
-speciesCount$Freq<-as.logical(speciesCount$Freq)
-present<-aggregate(speciesCount$Freq, by= list(speciesCount$Var1, speciesCount$Var3), FUN = sum)
-colnames(present)<-c("Orthogroup","trait","present")
+speciesCount <- as.data.frame(table(OrthoMerge$Orthogroup, OrthoMerge$org, OrthoMerge$trait))
+speciesCount$Freq <- as.logical(speciesCount$Freq)
+present <- aggregate(speciesCount$Freq, by = list(speciesCount$Var1, speciesCount$Var3), FUN = sum)
+colnames(present) <- c("Orthogroup", "trait", "present")
 
-OrthoMerge<-merge(OrthoMerge, present, by=c("Orthogroup","trait"))
+OrthoMerge <- merge(OrthoMerge, present, by = c("Orthogroup", "trait"))
 
-# focusing on conserved genes, but this could be changed for users if they want stuff between 2 orgs
+## focusing on conserved genes, but this could be changed for users if they want stuff between 2 orgs
 
 OrthoMerge <- OrthoMerge[OrthoMerge$present > 2,]
 
@@ -284,10 +290,11 @@ genecount <-
 
     return(checking_genes)
   }
+
 snps_sub$genecount <- unlist(genecount)
 
-write.csv(snps_sub, file=paste0(output, "snps_subset.csv"), row.names=F)
-write.table(OrthoMerge, file = paste0(output,"Orthogroup_hits.csv"), col.names = T, row.names = F, sep = ",")
+write.csv(snps_sub, file = paste0(output, "snps_subset.csv"), row.names = F)
+write.table(OrthoMerge, file = paste0(output, "Orthogroup_hits.csv"), col.names = T, row.names = F, sep = ",")
 
 rm(snps, snp_gene_hitTable)
 gc()
@@ -300,9 +307,9 @@ gc()
 
 if(!is.null(perm_files)){
   
-  # they do not, make new permutations
+  ## they do not, make new permutations
   
-  perm_files<-paste0(output, "permutation_files/snps")
+  perm_files <- paste0(output, "permutation_files/snps")
   
   ## reading in chr coordinates for orgs in metaTable
   ## check to make sure the file has been updated to accomodate new orgs
@@ -319,17 +326,18 @@ if(!is.null(perm_files)){
   chrLengths <- as.list(chrLengths)
   chrLengths <- lapply(chrLengths, function(x) x[!is.na(x)])
   
-  ##each row in leafcollapsedSNPs is a trait
+  ## each row in leafcollapsedSNPs is a trait
   
   AllPermuts <-
     foreach(
       row = iter(leafcollapsedSNPs, by = 'row'),
       .combine = 'rbind',
       .packages = packages.loaded()
-    ) %dopar% {
+    ) %dorng% {
       print(paste("Starting permutations for", row$trait))
       
-      # tells the permutations how many chr and snps per org to replicate for this trait
+      ## tells the permutations how many chr and snps per org to replicate for this trait
+      
       orgDetails <- data.frame(
         org = metaTable$orgs,
         nChrs = metaTable$nChrs,
@@ -337,7 +345,8 @@ if(!is.null(perm_files)){
       )
       permuteDataset <- with(orgDetails, {
         return(data.frame(rbindlist(lapply(1:numPermutations, function(x) {
-          # initiate table
+          
+          ## initiate table
           
           thisPermute <-
             data.table(
@@ -348,20 +357,22 @@ if(!is.null(perm_files)){
               stringsAsFactors = FALSE
             )
           for (j in 1:nrow(orgDetails)) {
-            # j == organism iterator
-            # this is meant to handle traits that don't exist in all org datasets
-            # for example, rice is missing cobalt, but I want to know what the results are for the other 4 orgs
+            
+            ## j == organism iterator
+            ## this is meant to handle traits that don't exist in all org datasets
+            ## for example, rice is missing cobalt, but I want to know what the results are for the other 4 orgs
             
             if (nSNPs[j] == 0) {
               thisChr <- NA
               
             } else{
-              # randomly scatters snps among chrs (but doesn't select bp yet)
+              
+              ## randomly scatters snps among chrs (but doesn't select bp yet)
               
               thisChr <- sort(sample(nChrs[j], nSNPs[j], replace = TRUE))
               
-              # randomly assigns a bp depending on the chr selected above
-              # accounts for each chr's length when assigning the largest bp value
+              ## randomly assigns a bp depending on the chr selected above
+              ## accounts for each chr's length when assigning the largest bp value
               
               thisPermute <-
                 with(chrLengths, {
@@ -384,10 +395,10 @@ if(!is.null(perm_files)){
           return(thisPermute)
         })
         )))
-      })  #end permutation (with() loop)
+      })  ## end permutation (with() loop)
       permuteDataset$trait <- row$trait
       
-      #permutation snps also get unique loci identifiers
+      ## permutation snps also get unique loci identifiers
       
       permuteDataset$loci <- paste0(permuteDataset$org,
                                     "_",
@@ -399,6 +410,7 @@ if(!is.null(perm_files)){
       )
       return(permuteDataset)
     }
+  
   rm(chrLengths)
   
   ## getting ranges from real data
@@ -439,9 +451,9 @@ if(!is.null(perm_files)){
   AllPermuts <-
     AllPermuts[order(AllPermuts[, "org"], AllPermuts[, "chr"], AllPermuts[, "bp"]), ]
   
-  # at 1000 permutations, this file gets big, so best to process in chunks
-  # if your datasets are much larger and would like to chunk it up more to save memory,
-  # this is where I would edit
+  ## at 1000 permutations, this file gets big, so best to process in chunks
+  ## if your datasets are much larger and would like to chunk it up more to save memory,
+  ## this is where I would edit
   
   if(numPermutations > 100) {
     for (i in seq(100, numPermutations, by = 100)) {
