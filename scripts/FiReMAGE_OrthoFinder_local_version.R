@@ -565,23 +565,34 @@ for(e in list.files(
   ## stuff also gets funky when i get to a third layer of foreach loops, so this very outer one is a regular for loop
   
   for (e in Trait_split) {
+    
     print(paste0(e$trait[1], " permutation merging"))
     
-    PermutationMerge <-
-      
+    # # MCLAPPLY NOTE: will NOT run in parallel on Windows due to forking issues # #
+    
+    # OG_IDs <- mclapply(as.character(unique(e$`Gene Name`)),
+    #                    FUN = get_orthogroups, mc.cores = nCore)
+    
+    ## foreach is recommended for Windows to run in parallel
+    ## can switch to below if running on Windows
+    
+    OG_IDs <-
       foreach(
         i = as.character(unique(e$`Gene Name`)),
-        .packages = packages.loaded(),
-        .combine = rbind
+        .packages = packages.loaded()
       ) %dopar% {
-        og<-orthologs$Orthogroup[as.integer(unlist(Map(grep, paste(i), orthologs)))]
-        if (!identical(og, character(0))) {
-          return(cbind(e[e$`Gene Name` == i, ], data.frame(Orthogroup = og)))
-        }
+        og <- get_orthogroups(i)
+        return(og)
       }
+    
+    # # Continue # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+    
+    PermutationMerge <- merge(e, bind_rows(OG_IDs), by.x = "Gene Name",
+                              by.y = "ID")
+    
     PermutationMerge$Orthogroup <- as.character(PermutationMerge$Orthogroup) 
-    # present is what I named the col for counting the number of species present in a ortho group
-    # present is used later to rank genes
+    ## present is what I named the col for counting the number of species present in a ortho group
+    ## present is used later to rank genes
     
     speciesCount <- as.data.frame(table(PermutationMerge$Orthogroup, PermutationMerge$org, PermutationMerge$permutation))
     speciesCount$Freq <- as.logical(speciesCount$Freq)
@@ -590,13 +601,13 @@ for(e in list.files(
     present$permutation <- as.integer(as.character(present$permutation))
     present$Orthogroup <- as.character(present$Orthogroup)
    
-    PermutationMerge <- merge(PermutationMerge, present, by = c("Orthogroup","permutation"))
+    PermutationMerge <- merge(PermutationMerge, present, by = c("Orthogroup", "permutation"))
     
-    # focusing on conserved genes, but this could be changed for users if they want stuff between 2 orgs
+    ## focusing on conserved genes, but this could be changed for users if they want stuff between 2 orgs
     
     PermutationMerge <- PermutationMerge[PermutationMerge$present > 2, ]
     
-    # I write this out to use later for making graphs
+    ## I write this out to use later for making graphs
     
     write.csv(
       PermutationMerge,
@@ -615,6 +626,8 @@ for(e in list.files(
     
     rm(PermutationMerge)
   }
+  rm(gene_hitTable, Trait_split)
+  gc()
 }
 
 print(paste("End permutations", Sys.time()))
@@ -627,7 +640,7 @@ print("Summarizing actual data")
  
 ## counts number of genes & loci for each trait/org/# of species present in ortho group
 
-Final_summary<-aggregate(
+Final_summary <- aggregate(
   cbind(`Gene Name`, loci) ~ trait + present + org,
   data = OrthoMerge,
   FUN = function(x)
@@ -767,13 +780,21 @@ backend <-
         size = dataset
       )) +
       scale_size_manual(values = c(4, 3)) +
-      labs(x = "Overlapped Genes Returned",
-           title = paste0("Ortholgs in groups with ",data$present[1],"/",nrow(metaTable)," species representation")) +
+      labs(
+        x = "Overlapped Genes Returned",
+        title = paste0(
+          "Ortholgs in groups with ",
+          data$present[1],
+          "/",
+          nrow(metaTable),
+          " species representation"
+        )
+      ) +
       theme_bw(base_size = 18) +
       theme(plot.title = element_text(hjust = 0.5)) +
       scale_color_manual(values = c("#7fcdbb", "#2c7fb8")) +
-      facet_grid( ~org, scales = "free")
-
+      facet_grid(~ org, scales = "free")
+    
     G99 <-
       ggplot(data,
              aes(
@@ -792,11 +813,19 @@ backend <-
         size = dataset
       )) +
       scale_size_manual(values = c(4, 3)) +
-      labs(x = "Overlapped Genes Returned",
-           title = paste0("Ortholgs in groups with ",data$present[1],"/",nrow(metaTable)," species representation")) +
+      labs(
+        x = "Overlapped Genes Returned",
+        title = paste0(
+          "Ortholgs in groups with ",
+          data$present[1],
+          "/",
+          nrow(metaTable),
+          " species representation"
+        )
+      ) +
       theme_bw(base_size = 18) +
       scale_color_manual(values = c("#7fcdbb", "#2c7fb8")) +
-      facet_grid( ~org, scales = "free")
+      facet_grid(~ org, scales = "free")
  
     ggsave(
       paste0(
@@ -834,20 +863,20 @@ candidateList <-
     sub_OrthoMerge <-
       subset(OrthoMerge, org==o)
 
-    # getting all the genes with a loci hit, and getting the gene/loci counts added on
+    ## getting all the genes with a loci hit, and getting the gene/loci counts added on
 
     subList <-
       distinct(merge(sub_OrthoMerge,
                      snps_sub[, c("loci", "genecount")],
                      by = "loci"))
 
-    # bc we think that a loci should be corresponding to only one true causal gene (usually),
-    # we penalize genes coming from loci with high genecounts
+    ## bc we think that a loci should be corresponding to only one true causal gene (usually),
+    ## we penalize genes coming from loci with high genecounts
 
     subList$gFDR <- (1 - (1 / (subList$genecount)))
 
-    # use the info from the summaries above to calculate FDR from the permutations
-    # it's long lines, but it's avg # of genes from permutations / avg # of genes from real data for each org/trait/# of species present in ortho group
+    ## use the info from the summaries above to calculate FDR from the permutations
+    ## it's long lines, but it's avg # of genes from permutations / avg # of genes from real data for each org/trait/# of species present in ortho group
 
     pFDR_backend <-
       foreach(
