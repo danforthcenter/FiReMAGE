@@ -311,7 +311,7 @@ gc()
 
 ## Does user have previous loci permutations to use?
 
-if(!is.null(perm_files)){
+if(is.null(perm_files)){
   
   ## they do not, make new permutations
   
