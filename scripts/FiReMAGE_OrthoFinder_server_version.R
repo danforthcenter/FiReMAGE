@@ -484,7 +484,7 @@ if(is.null(perm_files)){
       row.names = F
     )
   }
-  rm(AllPermuts)
+  rm(AllPermuts, RandomLociRanges)
 }
 
 ################################################################################
@@ -530,7 +530,6 @@ backend <-
     )
   }
 
-rm(RandomLociRanges)
 gc()
 
 print("Random dataset ...")
