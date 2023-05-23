@@ -315,7 +315,7 @@ if(is.null(perm_files)){
   
   ## they do not, make new permutations
   
-  perm_files <- paste0(output, "permutation_files/snps")
+  perm_files <- paste0(output)
   
   ## reading in chr coordinates for orgs in metaTable
   ## check to make sure the file has been updated to accomodate new orgs
@@ -501,7 +501,7 @@ if(is.null(perm_files)){
 backend <-
   foreach(
     e = list.files(
-      paste0(output, "permutation_files/snps"),
+      paste0(perm_files, "permutation_files/snps/"),
       pattern = "permutations.csv",
       full.names = T
     ),
@@ -536,7 +536,6 @@ backend <-
       ),
       row.names = F
     )
-    gc()
   }
 
 rm(RandomLociRanges)
@@ -547,13 +546,14 @@ print("Random dataset ...")
 
 print(paste("Beginning permutation ortholog search:", Sys.time()))
 
-for(e in list.files(
+for(f in list.files(
   paste0(output, "permutation_files/gene_hits"),
   pattern = "_hitTable.csv",
   full.names = T
 )) {
   
-  gene_hitTable <- fread(e, sep = ",", stringsAsFactors = F, header = T)
+  print(paste0("Reading in ",f)) 
+  gene_hitTable <- fread(f, sep = ",", stringsAsFactors = F, header = T)
   
   Trait_split <-
     split(

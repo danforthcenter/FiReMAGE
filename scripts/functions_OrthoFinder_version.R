@@ -69,6 +69,6 @@ collapsing <- function(snpTable, begin_loci = 1, done = F) {
 get_orthogroups<-function(x, tab_strs=og_strs){
   og<-gsub("^(OG\\d+).*","\\1", tab_strs[str_which(tab_strs, x)])
   if (!identical(og, character(0))) {
-    return(data.frame(Orthogroup = og, ID = x))
+    return(data.frame(Orthogroup = og, ID = x, stringsAsFactors = F))
   }
 }
