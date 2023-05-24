@@ -9,19 +9,20 @@ rm(list=ls())
 ## command line options for use on the server
 
 "FiReMAGE script
-Usage: FiReMAGE_InParanoid_server_version.R -s <path> -m <path> -f <path> [-p <int> -c <int> -o <path>]
+Usage: FiReMAGE_OrthoFinder_server_version.R -s <path> -m <path> -f <path> [options]
 Options:
--h, --help                      Show this screen.
--s <path>, --snps <path>        Path to the directory containing the SNP files for the comparison
--m <path>, --metaTable <path>   Path to read in the metadata table of organisms in the comparison
--f <path>, --orthologFile <path> Path to read in ortholog group file for the comparison
--o <path>, --output <path>      Files will be written to this path [default: './FM_output']
--p <int>, --permutations <int>  Number of iterations [default: 1000]
--c <int>, --cores <int>         Number of cores to use for parallel loop [default: 1]
+-h, --help  Show this screen.
+-s <path>   SNP file directory for the comparison
+-m <path>   Metadata table for organisms in the comparison
+-f <path>   Ortholog group file for the comparison
+-o <path>   Output directory [default: './FM_output']
+-p <int>    Number of random permutations [default: 10]
+-r <path>   Path to previous loci permutations, useful for rerunning comparisons with different ortholog tables
+-c <int>    Number of cores [default: 1]
 " -> doc
 
-# sometimes the requirement 'rlang' for tidyr needs to be reinstalled on it's own, update.packages
-# and this loop won't work for it for some reason
+## sometimes the requirement 'rlang' for tidyr needs to be reinstalled on it's own, update.packages
+## and this loop won't work for it for some reason on my server
 
 packages <-
   c(
@@ -36,7 +37,8 @@ packages <-
     "iterators",
     "ggplot2",
     "scales",
-    "rbenchmark"
+    "doRNG",
+    "stringr"
   )
 for (x in packages) {
   if (!require(x, character.only = TRUE, quietly = TRUE)) {
@@ -55,21 +57,24 @@ library(readr)
 library(iterators)
 library(ggplot2)
 library(scales)
-library(rbenchmark)
+library(doRNG)
+library(stringr)
 
 source("./scripts/functions_OrthoFinder_version.R")
 
 ## docopt options,orthoFilePath from InParanoid was changed to orthologs here
+
 print("Reading in command line options...")
 
 opts <- docopt(doc)
 str(opts)
-snpPath<-opts[["--snps"]]
-orthologs<-fread(opts[["--orthologFile"]], sep="\t", stringsAsFactors = FALSE)
-metaTable<-fread(opts[["--metaTable"]], sep=",", stringsAsFactors = FALSE)
-output<-opts[["--output"]]
-numPermutations <- as.integer(opts[["--permutations"]])
-nCore <- as.integer(opts[["--cores"]])
+snpPath <- opts[["-s"]]
+orthologs <- fread(opts[["-f"]], sep = "\t", stringsAsFactors = FALSE)
+metaTable <- fread(opts[["-m"]], sep = ",", stringsAsFactors = FALSE)
+output <- opts[["-o"]]
+numPermutations <- as.integer(opts[["-p"]])
+nCore <- as.integer(opts[["-c"]])
+perm_files <- opts[["-r"]]
 
 ## setting up cores for parallel processes
 
@@ -88,13 +93,17 @@ dir.create(paste0(output, "permutation_files/snps/"))
 dir.create(paste0(output, "permutation_files/gene_hits/"))
 dir.create(paste0(output, "candidate_lists/")) 
 
+## collapsing orthogroups into strings speed up searches
+
+og_strs<-apply(orthologs, 1, paste0, collapse = ",")
+
 ## making sure metaTable is in alphabetical order for sanity's sake
 
 metaTable <- metaTable[order(metaTable$orgs), ]
 
 ## gene coordinates for all species, used to find linked genes in the snps
 
-# NA's from all_gene_coords is trying to change mitchondria (M) and chloroplast (C) chr to integers
+## NA's from all_gene_coords is trying to change mitchondria (M) and chloroplast (C) chr to integers
 
 all_gene_coords <-
   foreach(
@@ -114,6 +123,8 @@ all_gene_coords <-
     coords$org <- o
     return(coords)
   }
+
+rm(orthologs)
 
 ################################################################################
 ### 1. Collapsing snp datasets (input_as_loci==FALSE) into loci and looking for linked genes
@@ -152,7 +163,7 @@ CollapsedSNPs <-
             }
           }
 
-# appending datasets input as loci
+## appending datasets input as loci
 
 for(m in metaTable$orgs[metaTable$input_as_loci]){
   file <-
@@ -162,29 +173,29 @@ for(m in metaTable$orgs[metaTable$input_as_loci]){
       full.names = TRUE
     )
   SNPfile <- read.csv(file)
-  SNPfile<-SNPfile[,c("trait","org","chr","bp","start","end")]
+  SNPfile <- SNPfile[,c("trait", "org", "chr", "bp", "start", "end")]
   ###ordering--must have chromosomes and SNPs in numerical order
-  SNPfile$chr<-as.integer(SNPfile$chr)
-  SNPfile<-SNPfile[order(SNPfile[,"trait"], SNPfile[,"org"], SNPfile[,"chr"], SNPfile[, "end"]),]
-  SNPfile$SNPend<-NA
-  SNPfile$clpsRanges<-SNPfile$end - SNPfile$start
+  SNPfile$chr <- as.integer(SNPfile$chr)
+  SNPfile <- SNPfile[order(SNPfile[,"trait"], SNPfile[,"org"], SNPfile[,"chr"], SNPfile[, "end"]),]
+  SNPfile$SNPend <- NA
+  SNPfile$clpsRanges <- SNPfile$end - SNPfile$start
   SNPfile$range <- metaTable$range[metaTable$orgs == m]
-  CollapsedSNPs<-rbind(CollapsedSNPs,SNPfile)
+  CollapsedSNPs <- rbind(CollapsedSNPs, SNPfile)
 }
 
-# SNPs within 2*range of the beginning of loci are left with clpsRanges at NA, so we remove them to leave only loci
+## SNPs within 2*range of the beginning of loci are left with clpsRanges at NA, so we remove them to leave only loci
 
 snps_sub <- CollapsedSNPs[!is.na(CollapsedSNPs$clpsRanges), ]
 
-# The first loci will get it's start set at bp - range, which will be negative, so set those back to 1
+## The first loci will get it's start set at bp - range, which will be negative, so set those back to 1
 
 snps_sub$start[snps_sub$start < 1] <- 1
 
-# get rid of SNPend and clpsranges columns and reordering columns, info still in CollapsedSNPs for sanity checks if needed
+## get rid of SNPend and clpsranges columns and reordering columns, info still in CollapsedSNPs for sanity checks if needed
 
 snps_sub <- data.frame(snps_sub[, c("org", "chr", "bp", "trait")], apply(snps_sub[, c("start", "end")], 2, ceiling))
 
-# making unique loci names
+## making unique loci names
 
 snps_sub$loci <- paste0(snps_sub$org,
                         "_",
@@ -194,7 +205,7 @@ snps_sub$loci <- paste0(snps_sub$org,
                         "_",
                         snps_sub$bp)
 
-# counting collapsed snps for each org/trait combo
+## counting collapsed snps for each org/trait combo
 
 leafcollapsedSNPs <- data.frame(unclass(table(snps_sub$trait, snps_sub$org)))
 leafcollapsedSNPs <- leafcollapsedSNPs[, order(colnames(leafcollapsedSNPs))]
@@ -223,44 +234,52 @@ snp_gene_hitTable <-
     type = "any",
     nomatch = NULL
   )
+
 write.csv(
   snp_gene_hitTable,
   file = paste0(output, "snp_gene_hitTable.csv"),
   row.names = F
 )
 
-OrthoMerge <-
-  foreach(
-          i = as.character(unique(snp_gene_hitTable$`Gene Name`)),
-          .packages = packages.loaded(),
-          .combine = rbind
-        ) %dopar% {
-          og<-orthologs$Orthogroup[as.integer(unlist(Map(grep, paste(i), orthologs)))]
-          if (!identical(og, character(0))) {
-            return(cbind(snp_gene_hitTable[snp_gene_hitTable$`Gene Name` == i,],
-                         data.frame(Orthogroup = og)))
-          }
-        }
+# # MCLAPPLY NOTE: will NOT run in parallel on Windows due to forking issues # #
+
+OG_IDs <- mclapply(as.character(unique(snp_gene_hitTable$`Gene Name`)),
+                          FUN = get_orthogroups, mc.cores = nCore)
+
+## foreach is recommended for Windows to run in parallel
+## can switch to below if running on Windows
+
+# OG_IDs <-
+#   foreach(
+#     i = as.character(unique(snp_gene_hitTable$`Gene Name`)),
+#     .packages = packages.loaded()
+#   ) %dopar% {
+#     og <- get_orthogroups(i)
+#     return(og)
+#   }
+
+# # Continue # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+OrthoMerge<-merge(snp_gene_hitTable, bind_rows(OG_IDs), by.x = "Gene Name",
+                  by.y = "ID")
 
 ## quick sanity check to make sure orthogroups merged with their genes correctly, I'll leave it here for troubleshooting
 
 # backend<- foreach(i=1:nrow(OrthoMerge), .combine = c) %dopar% {
 #   OrthoMerge$Orthogroup[i]==orthologs$Orthogroup[as.integer(unlist(Map(grep, paste(OrthoMerge$`Gene Name`[i]), orthologs)))]
 # }
- 
-##
 
-# present is what I named the col for counting the number of species present in a ortho group
-# present is used later to rank genes
+## present is what I named the col for counting the number of species present in a ortho group
+## present is used later to rank genes
 
-speciesCount<-as.data.frame(table(OrthoMerge$Orthogroup, OrthoMerge$org, OrthoMerge$trait))
-speciesCount$Freq<-as.logical(speciesCount$Freq)
-present<-aggregate(speciesCount$Freq, by= list(speciesCount$Var1, speciesCount$Var3), FUN = sum)
-colnames(present)<-c("Orthogroup","trait","present")
+speciesCount <- as.data.frame(table(OrthoMerge$Orthogroup, OrthoMerge$org, OrthoMerge$trait))
+speciesCount$Freq <- as.logical(speciesCount$Freq)
+present <- aggregate(speciesCount$Freq, by = list(speciesCount$Var1, speciesCount$Var3), FUN = sum)
+colnames(present) <- c("Orthogroup", "trait", "present")
 
-OrthoMerge<-merge(OrthoMerge, present, by=c("Orthogroup","trait"))
+OrthoMerge <- merge(OrthoMerge, present, by = c("Orthogroup", "trait"))
 
-# focusing on conserved genes, but this could be changed for users if they want stuff between 2 orgs
+## focusing on conserved genes, but this could be changed for users if they want stuff between 2 orgs
 
 OrthoMerge <- OrthoMerge[OrthoMerge$present > 2,]
 
@@ -271,51 +290,63 @@ genecount <-
 
     return(checking_genes)
   }
+
 snps_sub$genecount <- unlist(genecount)
 
-write.csv(snps_sub, file=paste0(output, "snps_subset.csv"), row.names=F)
-write.table(OrthoMerge, file = paste0(output,"Orthogroup_hits.csv"), col.names = T, row.names = F, sep = ",")
+write.csv(snps_sub, file = paste0(output, "snps_subset.csv"), row.names = F)
+write.table(OrthoMerge, file = paste0(output, "Orthogroup_hits.csv"), col.names = T, row.names = F, sep = ",")
 
 rm(snps, snp_gene_hitTable)
+gc()
 
 ################################################################################
 ### 2.1 Creating random permutations
 ################################################################################
 
-## reading in chr coordinates for orgs in metaTable
-## check to make sure the file has been updated to accomodate new orgs
+## Does user have previous loci permutations to use?
 
-chrLengths <-
-  read.table(
-    file = "./data/org_chromosome_coords.csv",
-    header = TRUE,
-    sep = ",",
-    na.strings = NA,
-    stringsAsFactors = FALSE
-  )
-
-chrLengths <- as.list(chrLengths)
-chrLengths <- lapply(chrLengths, function(x) x[!is.na(x)])
-
-##each row in leafcollapsedSNPs is a trait
-
-AllPermuts <-
-  foreach(
-    row = iter(leafcollapsedSNPs, by = 'row'),
-    .combine = 'rbind',
-    .packages = packages.loaded()
-  ) %dopar% {
-    print(paste("Starting permutations for", row$trait))
-    
-    # tells the permutations how many chr and snps per org to replicate for this trait
-    orgDetails <- data.frame(
-      org = metaTable$orgs,
-      nChrs = metaTable$nChrs,
-      nSNPs = c(as.numeric(row[1, c(1:nrow(metaTable))]))
+if(is.null(perm_files)){
+  
+  ## they do not, make new permutations
+  
+  perm_files <- paste0(output)
+  
+  ## reading in chr coordinates for orgs in metaTable
+  ## check to make sure the file has been updated to accomodate new orgs
+  
+  chrLengths <-
+    read.table(
+      file = "./data/org_chromosome_coords.csv",
+      header = TRUE,
+      sep = ",",
+      na.strings = NA,
+      stringsAsFactors = FALSE
     )
-    permuteDataset <- with(orgDetails, {
-      return(data.frame(rbindlist(lapply(1:numPermutations, function(x) {
-          # initiate table
+  
+  chrLengths <- as.list(chrLengths)
+  chrLengths <- lapply(chrLengths, function(x) x[!is.na(x)])
+  
+  ## each row in leafcollapsedSNPs is a trait
+  
+  AllPermuts <-
+    foreach(
+      row = iter(leafcollapsedSNPs, by = 'row'),
+      .combine = 'rbind',
+      .packages = packages.loaded()
+    ) %dorng% {
+      print(paste("Starting permutations for", row$trait))
+      
+      ## tells the permutations how many chr and snps per org to replicate for this trait
+      
+      orgDetails <- data.frame(
+        org = metaTable$orgs,
+        nChrs = metaTable$nChrs,
+        nSNPs = c(as.numeric(row[1, c(1:nrow(metaTable))]))
+      )
+      permuteDataset <- with(orgDetails, {
+        return(data.frame(rbindlist(lapply(1:numPermutations, function(x) {
+          
+          ## initiate table
           
           thisPermute <-
             data.table(
@@ -326,20 +357,22 @@ AllPermuts <-
               stringsAsFactors = FALSE
             )
           for (j in 1:nrow(orgDetails)) {
-            # j == organism iterator
-            # this is meant to handle traits that don't exist in all org datasets
-            # for example, rice is missing cobalt, but I want to know what the results are for the other 4 orgs
+            
+            ## j == organism iterator
+            ## this is meant to handle traits that don't exist in all org datasets
+            ## for example, rice is missing cobalt, but I want to know what the results are for the other 4 orgs
             
             if (nSNPs[j] == 0) {
               thisChr <- NA
               
             } else{
-              # randomly scatters snps among chrs (but doesn't select bp yet)
+              
+              ## randomly scatters snps among chrs (but doesn't select bp yet)
               
               thisChr <- sort(sample(nChrs[j], nSNPs[j], replace = TRUE))
               
-              # randomly assigns a bp depending on the chr selected above
-              # accounts for each chr's length when assigning the largest bp value
+              ## randomly assigns a bp depending on the chr selected above
+              ## accounts for each chr's length when assigning the largest bp value
               
               thisPermute <-
                 with(chrLengths, {
@@ -350,9 +383,9 @@ AllPermuts <-
                       org = org[j],
                       chr = thisChr,
                       bp = unlist(lapply(1:nChrs[j], function(y)
-                            sample(get(as.character(org[j]))[y], 
-                                   length(which(thisChr == y)), 
-                                   replace = FALSE))),
+                        sample(get(as.character(org[j]))[y], 
+                               length(which(thisChr == y)), 
+                               replace = FALSE))),
                       stringsAsFactors = FALSE
                     )
                   ))
@@ -361,96 +394,98 @@ AllPermuts <-
           }
           return(thisPermute)
         })
-      )))
-    })  #end permutation (with() loop)
-    permuteDataset$trait <- row$trait
-    
-    #permutation snps also get unique loci identifiers
-    
-    permuteDataset$loci <- paste0(permuteDataset$org,
-                                  "_",
-                                  permuteDataset$trait,
-                                  "_",
-                                  permuteDataset$chr,
-                                  "_",
-                                  c(1:nrow(permuteDataset))
-                                )
-    return(permuteDataset)
-  }
-rm(chrLengths)
-
-## getting ranges from real data
-
-RandomLociRanges <- CollapsedSNPs[!is.na(CollapsedSNPs$clpsRanges), ]
-
-## same split as before with the additional permutation column
-
-AllPermuts_split <-
-  split(AllPermuts,
-        list(AllPermuts$org, AllPermuts$trait, AllPermuts$permutation))
-
-## randomly shuffles ranges from each org/trait combo in each permutation
-
-AllPermuts <-
-  foreach(A = AllPermuts_split,
-          .combine = rbind,
-          .packages = packages.loaded()) %do% {
-            c <- sample(RandomLociRanges$clpsRanges[RandomLociRanges$trait == A$trait[1] &
-                                                      RandomLociRanges$org == A$org[1]],
-                        size = nrow(A),
-                        replace = F)
-            A$start <-
-              A$bp - (ceiling(.5 * c) + metaTable$range[metaTable$orgs == A$org[1]])
-            
-            A$end <-
-              A$bp + (ceiling(.5 * c) + metaTable$range[metaTable$orgs == A$org[1]])
-            return(A)
-          }
-
-## if the range randomly happens to hang over a chr beginning we need to reset it back to 1
-## if the range hangs over a chr end it won't matter since there won't be any genes on that chr past the end point
-
-AllPermuts$start[AllPermuts$start < 0] <- 1
-
-## permutations need to be in order for foverlaps, still records permutations so this is fine
-
-AllPermuts <-
-  AllPermuts[order(AllPermuts[, "org"], AllPermuts[, "chr"], AllPermuts[, "bp"]), ]
-
-# at 1000 permutations, this file gets big, so best to process in chunks
-# if your datasets are much larger and would like to chunk it up more to save memory,
-# this is where I would edit
-
-if(numPermutations > 100) {
-  for (i in seq(100, numPermutations, by = 100)) {
-    permut_chunk <- AllPermuts[AllPermuts$permutation %in% c((i - 99):i), ]
-    
+        )))
+      })  ## end permutation (with() loop)
+      permuteDataset$trait <- row$trait
+      
+      ## permutation snps also get unique loci identifiers
+      
+      permuteDataset$loci <- paste0(permuteDataset$org,
+                                    "_",
+                                    permuteDataset$trait,
+                                    "_",
+                                    permuteDataset$chr,
+                                    "_",
+                                    c(1:nrow(permuteDataset))
+      )
+      return(permuteDataset)
+    }
+  
+  rm(chrLengths)
+  
+  ## getting ranges from real data
+  
+  RandomLociRanges <- CollapsedSNPs[!is.na(CollapsedSNPs$clpsRanges), ]
+  
+  ## same split as before with the additional permutation column
+  
+  AllPermuts_split <-
+    split(AllPermuts,
+          list(AllPermuts$org, AllPermuts$trait, AllPermuts$permutation))
+  
+  ## randomly shuffles ranges from each org/trait combo in each permutation
+  
+  AllPermuts <-
+    foreach(A = AllPermuts_split,
+            .combine = rbind,
+            .packages = packages.loaded()) %do% {
+              c <- sample(RandomLociRanges$clpsRanges[RandomLociRanges$trait == A$trait[1] &
+                                                        RandomLociRanges$org == A$org[1]],
+                          size = nrow(A),
+                          replace = F)
+              A$start <-
+                A$bp - (ceiling(.5 * c) + metaTable$range[metaTable$orgs == A$org[1]])
+              
+              A$end <-
+                A$bp + (ceiling(.5 * c) + metaTable$range[metaTable$orgs == A$org[1]])
+              return(A)
+            }
+  
+  ## if the range randomly happens to hang over a chr beginning we need to reset it back to 1
+  ## if the range hangs over a chr end it won't matter since there won't be any genes on that chr past the end point
+  
+  AllPermuts$start[AllPermuts$start < 0] <- 1
+  
+  ## permutations need to be in order for foverlaps, still records permutations so this is fine
+  
+  AllPermuts <-
+    AllPermuts[order(AllPermuts[, "org"], AllPermuts[, "chr"], AllPermuts[, "bp"]), ]
+  
+  ## at 1000 permutations, this file gets big, so best to process in chunks
+  ## if your datasets are much larger and would like to chunk it up more to save memory,
+  ## this is where I would edit
+  
+  if(numPermutations > 100) {
+    for (i in seq(100, numPermutations, by = 100)) {
+      permut_chunk <- AllPermuts[AllPermuts$permutation %in% c((i - 99):i), ]
+      
+      write.table(
+        permut_chunk,
+        file = paste0(
+          output,
+          "permutation_files/snps/",
+          i - 99,
+          "_",
+          i,
+          "_permutations.csv"
+        ),
+        sep = ",",
+        col.names = TRUE,
+        row.names = FALSE
+      )
+    }
+    rm(permut_chunk)
+  } else{
     write.table(
-      permut_chunk,
-      file = paste0(
-        output,
-        "permutation_files/snps/",
-        i - 99,
-        "_",
-        i,
-        "_permutations.csv"
-      ),
+      AllPermuts,
+      file = paste0(output, "permutation_files/snps/", min(AllPermuts$permutation), "_", max(AllPermuts$permutation), "_permutations.csv"),
       sep = ",",
-      col.names = TRUE,
-      row.names = FALSE
+      col.names = T,
+      row.names = F
     )
   }
-  rm(permut_chunk)
-} else{
-  write.table(
-    AllPermuts,
-    file = paste0(output, "permutation_files/snps/",min(AllPermuts$permutation),"_",max(AllPermuts$permutation),"_permutations.csv"),
-    sep = ",",
-    col.names = T,
-    row.names = F
-  )
+  rm(AllPermuts, RandomLociRanges)
 }
-rm(AllPermuts)
 
 ################################################################################
 ### 2.2 Filtering linked genes for orthologs in permutation data
@@ -459,8 +494,7 @@ rm(AllPermuts)
 backend <-
   foreach(
     e = list.files(
-      paste0(output, "permutation_files/snps"),
-      pattern = "permutations.csv",
+      paste0(perm_files, "permutation_files/snps/"),
       full.names = T
     ),
     .packages = packages.loaded()
@@ -494,10 +528,9 @@ backend <-
       ),
       row.names = F
     )
-    
   }
 
-rm(RandomLociRanges)
+gc()
 
 print("Random dataset ...")
 
@@ -505,14 +538,14 @@ print("Random dataset ...")
 
 print(paste("Beginning permutation ortholog search:", Sys.time()))
 
-for(e in list.files(
+for(f in list.files(
   paste0(output, "permutation_files/gene_hits"),
   pattern = "_hitTable.csv",
   full.names = T
   )) {
  
-  print(paste0("Reading in ",e)) 
-  gene_hitTable <- fread(e, sep = ",", stringsAsFactors = F, header = T)
+  print(paste0("Reading in ",f)) 
+  gene_hitTable <- fread(f, sep = ",", stringsAsFactors = F, header = T)
   
   Trait_split <-
     split(
@@ -524,23 +557,34 @@ for(e in list.files(
   ## stuff also gets funky when i get to a third layer of foreach loops, so this very outer one is a regular for loop
 
   for (e in Trait_split) {
+    
     print(paste0(e$trait[1], " permutation merging"))
     
-    PermutationMerge <-
-      
-      foreach(
-        i = as.character(unique(e$`Gene Name`)),
-        .packages = packages.loaded(),
-        .combine = rbind
-      ) %dopar% {
-        og<-orthologs$Orthogroup[as.integer(unlist(Map(grep, paste(i), orthologs)))]
-        if (!identical(og, character(0))) {
-          return(cbind(e[e$`Gene Name` == i, ], data.frame(Orthogroup = og)))
-        }
-      }
+    # # MCLAPPLY NOTE: will NOT run in parallel on Windows due to forking issues # #
+    
+    OG_IDs <- mclapply(as.character(unique(e$`Gene Name`)),
+                       FUN = get_orthogroups, mc.cores = nCore)
+    
+    ## foreach is recommended for Windows to run in parallel
+    ## can switch to below if running on Windows
+    
+    # OG_IDs <-
+    #   foreach(
+    #     i = as.character(unique(e$`Gene Name`)),
+    #     .packages = packages.loaded()
+    #   ) %dopar% {
+    #     og <- get_orthogroups(i)
+    #     return(og)
+    #   }
+    
+    # # Continue # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+    
+    PermutationMerge <- merge(e, bind_rows(OG_IDs), by.x = "Gene Name",
+                              by.y = "ID")
+    
     PermutationMerge$Orthogroup <- as.character(PermutationMerge$Orthogroup)
-    # present is what I named the col for counting the number of species present in a ortho group
-    # present is used later to rank genes
+    ## present is what I named the col for counting the number of species present in a ortho group
+    ## present is used later to rank genes
     
     speciesCount <- as.data.frame(table(PermutationMerge$Orthogroup, PermutationMerge$org, PermutationMerge$permutation))
     speciesCount$Freq <- as.logical(speciesCount$Freq)
@@ -549,13 +593,13 @@ for(e in list.files(
     present$permutation <- as.integer(as.character(present$permutation))
     present$Orthogroup <- as.character(present$Orthogroup)
 
-    PermutationMerge <- merge(PermutationMerge, present, by = c("Orthogroup","permutation"))
+    PermutationMerge <- merge(PermutationMerge, present, by = c("Orthogroup", "permutation"))
     
-    # focusing on conserved genes, but this could be changed for users if they want stuff between 2 orgs
+    ## focusing on conserved genes, but this could be changed for users if they want stuff between 2 orgs
     
     PermutationMerge <- PermutationMerge[PermutationMerge$present > 2, ]
                 
-    # I write this out to use later for making graphs
+    ## I write this out to use later for making graphs
     
     write.csv(
       PermutationMerge,
@@ -574,6 +618,7 @@ for(e in list.files(
     
     rm(PermutationMerge)
   }
+  rm(gene_hitTable, Trait_split)
   gc()
 }
 
@@ -588,7 +633,7 @@ print("Summarizing actual data")
  
 ## counts number of genes & loci for each trait/org/# of species present in ortho group
 
-Final_summary<-aggregate(
+Final_summary <- aggregate(
   cbind(`Gene Name`, loci) ~ trait + present + org,
   data = OrthoMerge,
   FUN = function(x)
@@ -684,14 +729,14 @@ graphingDF <-
     summarize,
     GenesMean = mean(GeneCount),
     LociMean = mean(LociCount),
-    Gene95 = quantile(GeneCount, .95),
-    Loci95 = quantile(LociCount, .95),
-    Gene99 = quantile(GeneCount, .99),
-    Loci99 = quantile(LociCount, .99),
-    Gene05 = quantile(GeneCount, .05),
-    Loci05 = quantile(LociCount, .05),
-    Gene01 = quantile(GeneCount, .01),
-    Loci01 = quantile(LociCount, .01)
+    Gene95 = quantile(GeneCount, type=3, .95),
+    Loci95 = quantile(LociCount, type=3, .95),
+    Gene99 = quantile(GeneCount, type=3, .99),
+    Loci99 = quantile(LociCount, type=3, .99),
+    Gene05 = quantile(GeneCount, type=3, .05),
+    Loci05 = quantile(LociCount, type=3, .05),
+    Gene01 = quantile(GeneCount, type=3, .01),
+    Loci01 = quantile(LociCount, type=3, .01)
   )
 
 graphingDF$Gene95[graphingDF$dataset == "Actual"] <- NA
@@ -707,7 +752,7 @@ graphingDF$Loci05[graphingDF$dataset == "Actual"] <- NA
 ## so for now I make 3 different graphs for genes with CI 95 and genes with CI 99
 ## if you have any idea how to summarize the everything into one graph I'd be interested to know
 
-graphingDF$trait<-as.factor(graphingDF$trait)
+graphingDF$trait <- as.factor(graphingDF$trait)
 graphing_split <- split(graphingDF, graphingDF$present)
 
 backend <-
@@ -730,12 +775,20 @@ backend <-
         size = dataset
       )) +
       scale_size_manual(values = c(4, 3)) +
-      labs(x = "Overlapped Genes Returned",
-           title = paste0("Ortholgs in groups with ",data$present[1],"/",nrow(metaTable)," species representation")) +
+      labs(
+        x = "Overlapped Genes Returned",
+        title = paste0(
+          "Ortholgs in groups with ",
+          data$present[1],
+          "/",
+          nrow(metaTable),
+          " species representation"
+        )
+      ) +
       theme_bw(base_size = 18) +
       theme(plot.title = element_text(hjust = 0.5)) +
       scale_color_manual(values = c("#7fcdbb", "#2c7fb8")) +
-      facet_grid( ~org, scales = "free")
+      facet_grid(~ org, scales = "free")
 
     G99 <-
       ggplot(data,
@@ -755,11 +808,19 @@ backend <-
         size = dataset
       )) +
       scale_size_manual(values = c(4, 3)) +
-      labs(x = "Overlapped Genes Returned",
-           title = paste0("Ortholgs in groups with ",data$present[1],"/",nrow(metaTable)," species representation")) +
+      labs(
+        x = "Overlapped Genes Returned",
+        title = paste0(
+          "Ortholgs in groups with ",
+          data$present[1],
+          "/",
+          nrow(metaTable),
+          " species representation"
+        )
+      ) +
       theme_bw(base_size = 18) +
       scale_color_manual(values = c("#7fcdbb", "#2c7fb8")) +
-      facet_grid( ~org, scales = "free")
+      facet_grid(~ org, scales = "free")
  
     ggsave(
       paste0(
@@ -797,20 +858,15 @@ candidateList <-
     sub_OrthoMerge <-
       subset(OrthoMerge, org==o)
 
-    # getting all the genes with a loci hit, and getting the gene/loci counts added on
+    ## getting all the genes with a loci hit, and getting the gene/loci counts added on
 
     subList <-
       distinct(merge(sub_OrthoMerge,
                      snps_sub[, c("loci", "genecount")],
                      by = "loci"))
 
-    # bc we think that a loci should be corresponding to only one true causal gene (usually),
-    # we penalize genes coming from loci with high genecounts
-
-    subList$gFDR <- (1 - (1 / (subList$genecount)))
-
-    # use the info from the summaries above to calculate FDR from the permutations
-    # it's long lines, but it's avg # of genes from permutations / avg # of genes from real data for each org/trait/# of species present in ortho group
+    ## use the info from the summaries above to calculate FDR from the permutations
+    ## it's long lines, but it's avg # of genes from permutations / avg # of genes from real data for each org/trait/# of species present in ortho group
 
     pFDR_backend <-
       foreach(
@@ -838,23 +894,11 @@ candidateList <-
     return(subList)
   }
 
-## ranking genes
-candidateList$rank <-
-  ((1 - candidateList$gFDR) * (1 - candidateList$pFDR) * (candidateList$present / nrow(metaTable)))
-
-## we thought gFDR was too harsh on some of our known ionomics genes so we took it down a bit
-## the ranges used are pretty wide for ea species so it's likely to hit multiple genes, pFDR seemed more important
-## might do something similar to the total # of species represented in an ortho group
-## willing to hear any thoughts on this
-
-candidateList$rank_new <-
-  ((1 - (candidateList$gFDR * 0.2)) * (1 - (candidateList$pFDR)) * (candidateList$present / nrow(metaTable)))
-
 ## Dividing the candidate list up by trait
 
 candidateList_split <- split(candidateList, candidateList$trait)
 for (t in candidateList_split) {
-  individualcandidate <- arrange(t, desc(rank_new))
+  individualcandidate <- arrange(t, desc(pFDR))
   
   write.csv(
     individualcandidate,
