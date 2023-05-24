@@ -868,11 +868,6 @@ candidateList <-
                      snps_sub[, c("loci", "genecount")],
                      by = "loci"))
 
-    ## bc we think that a loci should be corresponding to only one true causal gene (usually),
-    ## we penalize genes coming from loci with high genecounts
-
-    subList$gFDR <- (1 - (1 / (subList$genecount)))
-
     ## use the info from the summaries above to calculate FDR from the permutations
     ## it's long lines, but it's avg # of genes from permutations / avg # of genes from real data for each org/trait/# of species present in ortho group
 
@@ -902,22 +897,11 @@ candidateList <-
     return(subList)
   }
 
-## ranking genes
-candidateList$rank <-
-  ((1 - candidateList$gFDR) * (1 - candidateList$pFDR) * (candidateList$present / nrow(metaTable)))
-
-## we thought gFDR was too harsh on some of our known ionomics genes so we took it down a bit
-## the ranges used are pretty wide for ea species so it's likely to hit multiple genes, pFDR seemed more important
-## might do something similar to the total # of species represented in an ortho group
-
-candidateList$rank_new <-
-  ((1 - (candidateList$gFDR * 0.2)) * (1 - (candidateList$pFDR)) * (candidateList$present / nrow(metaTable)))
-
 ## Dividing the candidate list up by trait
 
 candidateList_split <- split(candidateList, candidateList$trait)
 for (t in candidateList_split) {
-  individualcandidate <- arrange(t, desc(rank_new))
+  individualcandidate <- arrange(t, desc(pFDR))
   
   write.csv(
     individualcandidate,
