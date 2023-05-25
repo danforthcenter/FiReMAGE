@@ -622,7 +622,6 @@ for(f in list.files(
   gc()
 }
 
-rm(Trait_split)
 print(paste("End permutations", Sys.time()))
 
 ################################################################################
