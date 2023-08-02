@@ -64,7 +64,7 @@ metaTable <-
 
 orthologs <-
   fread(
-    file = "./data/OrthoFinder_orthologs/Orthogroups_5s.tsv",
+    file = "./data/OrthoFinder_orthologs/Orthogroups_10s.tsv",
     header = T,
     sep = "\t",
     stringsAsFactors = F
