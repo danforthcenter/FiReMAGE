@@ -41,7 +41,7 @@ FiReMAGE will use and install the following packages:
 ## 3. Function
 The metaTable file contains most of the information that FiReMAGE needs to filter GWAS datasets. Species, linkage ranges, and SNP/loci input information will all need to be updated for each new comparison. GWAS SNPs are read in from each species and collapsed into loci, to prevent redundant overlaps with genes.  GWAS/gene overlaps are identified in each species and then filtered to retain hits to orthologous genes. Only ortholog groups with hits in 3 or more species are kept.
 
-![FiReMAGE pipeline flowchart](https://github.com/danforthcenter/FiReMAGE/tree/main/FiReMAGE_pipeline_flowchart.png?raw=true)
+![FiReMAGE pipeline flowchart](https://github.com/danforthcenter/FiReMAGE/tree/main/FiReMAGE_pipeline_flowchart.png)
 
 To assess whether the frequency of returned genes is due to noise in the genome, random permutations are used to measure the chance we can generate the same results by selecting SNPs throughout the genome at random. Using the leafcollapsedSNP.csv, the pipeline will generate the permutation datasets, randomly selecting the same number of loci from each chromosome and organism as the actual dataset. Because the actual dataset represents collapsed SNPs with variable ranges due to the amount of nearby SNPs, we replicate this in the permutation dataset by randomly assigning loci ranges from the real dataset to their permutation counterparts. The final permutation dataset with the SNPs and random ranges is saved in the output directory permutation_files/snps/. Note, if using the same SNP data, genome assemblies and linkage ranges, previously generated snp files can be used with the "-r" option. I find this useful for comparing results across different ortholog tables. Permutations are put through the same pipeline as the actual dataset, and false discovery rates and candidate gene likelihoods are calculated. Averages and quantiles from the actual and permutation datasets are saved in the results directory as AllSummaries.csv.
 
@@ -59,7 +59,7 @@ Note:
 	2. -s <path>, --snps <path> : The path to the directory containing the SNP files for the comparison, required for the operation of FiReMAGE 
 	3. -m <path>, --metaTable <path>: Path to read in the metadata table of organisms in the comparison, required for the operation of FiReMAGE. A template and sample metatable input is in ./data/metaTables/
 	4. -f <path> --orthologFiles: The path to the directory containing ortholog files
-	5. -o <path>, --output <path>: Files will be written to this path, the default is “./FM_output/”
+	5. -o <path>, --output <path>: Files will be written to this path, the default is â€œ./FM_output/â€
 	6. -p <int>, --permutations <int>: Number of permutations for random dataset, default is 10. Recommendation is 1000 for full analysis, 100 for initial testing
 	7. -r <path>, Path to previous loci permutations, useful for rerunning comparisons with different ortholog tables, default is output directory "-o" 
 	8. -c <int>, --cores <int>: Number of cores to use for parallel loops, the default is 1 so it will naturally run on any system 
@@ -100,4 +100,4 @@ Wickham, H. & Henry, L. 2019. tidyr: Easily Tidy Data with 'spread()' and 'gathe
 
 Wickham, H., & Hester, J. 2020. readr: Read Rectangular Text Data. R package version 1.4.0. https://CRAN.R-project.org/package=readr
 
-Wickham, H., Fran�ois, R., Henry, L. and M�ller, K. 2018. dplyr: A Grammar of Data Manipulation. R package version 0.7.5. https://CRAN.R-project.org/package=dplyr
+Wickham, H., François, R., Henry, L. and Müller, K. 2018. dplyr: A Grammar of Data Manipulation. R package version 0.7.5. https://CRAN.R-project.org/package=dplyr
