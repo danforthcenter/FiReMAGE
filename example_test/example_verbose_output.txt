@@ -1,0 +1,29 @@
+# example verbose output in RStudio
+
+[1] "nCore working like it should?: TRUE"
+
+Warning messages:
+1: In eval(xpr, envir = envir) : NAs introduced by coercion
+2: In eval(xpr, envir = envir) : NAs introduced by coercion
+3: In eval(xpr, envir = envir) : NAs introduced by coercion
+
+          used  (Mb) gc trigger  (Mb) max used  (Mb)
+Ncells 2071825 110.7    3779852 201.9  3779852 201.9
+Vcells 7666352  58.5   15304313 116.8 15304312 116.8
+
+[1] "Random dataset ..."
+
+[1] "Beginning permutation ortholog search: 2023-08-23 09:40:01"
+
+[1] "Reading in ./example_test/example_output/permutation_files/gene_hits/1_10_gene_hitTable.csv"
+[1] "Fe permutation merging"
+[1] "Mn permutation merging"
+[1] "Mo permutation merging"
+
+[1] "End permutations 2023-08-23 09:42:04"
+
+[1] "Summarizing actual data"
+
+Warning messages:
+1: Removed 6 rows containing missing values (`geom_errorbarh()`). 
+2: Removed 6 rows containing missing values (`geom_errorbarh()`). 

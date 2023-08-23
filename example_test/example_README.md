@@ -1,6 +1,6 @@
 # Example test README
 
-The example folder contains a small subset of the ionomic datasets to quickly check if FiReMAGE files were downloaded properly. Example_test/example_output/ is provided to compare with the test output. A script for checking on a local device in RStudio is in example_test/scripts/, for testing on a remote server run the FiReMAGE_OrthoFinder_server_version.R with these arguments:
+The example folder contains a small subset of the ionomic datasets to quickly check if FiReMAGE files were downloaded properly. Example_test/example_output/ is provided to compare with the test output. An example for running FiReMAGE in RStudio is available with these arguments:
 
   -s ./data/snps/ 
   -m ./data/metaTables/V1_3s_metaTable.csv 
@@ -9,4 +9,4 @@ The example folder contains a small subset of the ionomic datasets to quickly ch
   -c [number of cpus] 
   -p 10
   
-Permutations are expected to vary slightly as they are random and only n=10. If an exact comparison is desired, users can look at the set.seed() function in R. Nevertheless, all of the actual dataset results should be the same. An example of the verbose output from the code can be seen in ‘./test_output/test_log.txt’. This file is what a normal output (including all the warnings) looks like for a run of FiReMAGE.
+Permutations are expected to vary slightly as they are random and only n=10. If an exact comparison is desired, users can set perm_files on line 110 to ./example_test/example_output/. Nevertheless, all of the actual dataset results should be the same. An example of the verbose output from the code is provided: example_verbose_output.txt. This file is what a normal output (including all the warnings) looks like for a run of FiReMAGE.

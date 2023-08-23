@@ -1,4 +1,4 @@
-#Orthofinder local
+#FiReMAGE (Orthofinder version) for RStudio
 
 ################################################################################
 ### 0. Setting up ##############################################################
@@ -45,7 +45,7 @@ library(stringr)
 
 ## set working dir
 
-setwd("YOURPATH/FiReMAGE_v1/OrthoFinder_v/")
+setwd("YOURPATH/FiReMAGE/")
 
 source("./scripts/FiReMAGE_functions.R")
 
