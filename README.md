@@ -59,7 +59,7 @@ Note:
 	2. -s <path>, --snps <path> : The path to the directory containing the SNP files for the comparison, required for the operation of FiReMAGE 
 	3. -m <path>, --metaTable <path>: Path to read in the metadata table of organisms in the comparison, required for the operation of FiReMAGE. A template and sample metatable input is in ./data/metaTables/
 	4. -f <path> --orthologFiles: The path to the directory containing ortholog files
-	5. -o <path>, --output <path>: Files will be written to this path, the default is â€œ./FM_output/â€
+	5. -o <path>, --output <path>: Files will be written to this path, the default is './FM_output/'
 	6. -p <int>, --permutations <int>: Number of permutations for random dataset, default is 10. Recommendation is 1000 for full analysis, 100 for initial testing
 	7. -r <path>, Path to previous loci permutations, useful for rerunning comparisons with different ortholog tables, default is output directory "-o" 
 	8. -c <int>, --cores <int>: Number of cores to use for parallel loops, the default is 1 so it will naturally run on any system 
