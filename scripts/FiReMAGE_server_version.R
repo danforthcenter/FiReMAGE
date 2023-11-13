@@ -811,7 +811,7 @@ backend <-
       labs(
         x = "Overlapped Genes Returned",
         title = paste0(
-          "Ortholgs in groups with ",
+          "Orthologs in groups with ",
           data$present[1],
           "/",
           nrow(metaTable),
