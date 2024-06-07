@@ -101,3 +101,7 @@ Wickham, H. & Henry, L. 2019. tidyr: Easily Tidy Data with 'spread()' and 'gathe
 Wickham, H., & Hester, J. 2020. readr: Read Rectangular Text Data. R package version 1.4.0. https://CRAN.R-project.org/package=readr
 
 Wickham, H., François, R., Henry, L. and Müller, K. 2018. dplyr: A Grammar of Data Manipulation. R package version 0.7.5. https://CRAN.R-project.org/package=dplyr
+
+## Funding Acknowledgment
+
+The creation of this study was supported by the National Science Foundation grant IOS-2309932 to Ivan Baxter and Brian Dilkes and Donald Danforth Plant Science Center (https://www.danforthcenter.org) funds supporting Lauren Whitt.  The datasets used in the work were collected under the funding of: National Science Foundation grant IOS-1126950 to Ivan Baxter, the United States Department of Energy Office of Science (BER; https://science.osti.gov/ber) grant DE-SC0023305 (Brian Dilkes), the Biotechnology and the Biological Sciences Research Council (https://www.ukri.org/councils/bbsrc/) grants BB/J003336/1 (Adam Price, Gareth Norton) and David Salt) and BB/L000113/1 (David Salt)
