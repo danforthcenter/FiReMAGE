@@ -1,8 +1,26 @@
 # FiReMAGE: Filtering Results of Multispecies Analogous GWAS Experiments
 
-FiReMAGE is a tool written in R that analyzes GWAS datasets of the same traits in multiple species to search for linked orthologous genes. 
+## 0. Summary of Approach
+We created a pipeline to compare GWAS results across species and determine if orthologous candidate genes underlie loci of phenotypic impact. The first step is processing of GWAS results to generate genomic intervals affecting the same trait in each member of a set of species. The genes within these intervals are tabulated and the orthologs of those genes in each member of the species set are determined. Permuted genomic regions, matched to each species’ input, are generated and processed in the same manner as the experimental data. Comparison of the background distribution of ortholog overlap, from the permutations, and the experimental observations are made  for each set of species and for every trait. 
 
-R version 4.1.0 (2021-05-18)
+Briefly: 
+
+1. Following a GWAS in species 1, regions containing linked SNPs affecting trait variation are identified and retained as windows. The trait’s top associated SNPs in each retained genomic window are identified and used to uniquely name the GWAS locus and summarize the significance and effect direction of the quantitative trait locus. 
+
+2. This is repeated for every species. At this point a set of genomic regions, linked to GWAS hits is established for the trait across all species.
+
+3. Candidate genes are identified as encoded within these experimentally determined windows. At this point, overlaps between the candidates and known ionomic genes can take place (this is separate from FIREMAGE and is a standard approach with GWAS made highly effective by the existence of a curated list of known ionomic genes).
+
+4. Orthology relationships for all candidates from step 3 are determined across the five species using Orthofinder. At this point, the number of GWAS loci containing orthologous candidate genes were determined. These orthologous genes are returned as FIREMAGE candidates. This is the first step that is unique to our FiREMAGE approach.
+
+5. FiREMAGE assesses the statistical significance of the orthology overlaps using permutation testing. 1000 sets of genomic regions with size-matched windows, from these five genomes, are selected at random. The rate at which these randomly permuted regions return overlapping orthologs is then used as the expected distribution of orthology overlaps for each trait given the observed number and size of genomic regions across all five species. This is a permutation test of the expected number of overlaps for windowed regions of the sizes returned from the GWAS for each species. 
+
+6. The False Discovery Rate of GWAS candidate gene ortholog overlaps is determined by comparing the true number of orthologous genes among the genomic regions affecting a trait across these species (Step 4) to the number determined for a permuted set of genomic regions across these species (Step 5). 
+
+7. This pipeline is repeated for every trait.
+
+
+Written under R version 4.1.0 (2021-05-18)
 
 	1. R Packages
 	2. Directories & Accompanying files
